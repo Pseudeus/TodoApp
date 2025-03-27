@@ -52,8 +52,16 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
+    //DaggerHilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
+
+    //LiveData
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.runtime.livedata)
+
+    //Room
+//    implementation("")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
