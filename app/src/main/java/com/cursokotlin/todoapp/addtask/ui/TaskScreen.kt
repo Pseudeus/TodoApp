@@ -1,13 +1,11 @@
 package com.cursokotlin.todoapp.addtask.ui
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,9 +26,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,33 +36,54 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.cursokotlin.todoapp.addtask.ui.model.TaskModel
 
 @Composable
 fun TasksScreen(viewModel: TasksViewModel, modifier: Modifier) {
     val showDialog: Boolean by viewModel.showDialog.observeAsState(initial = false)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
 
-    Box(modifier = modifier.fillMaxSize()) {
-        FabDialog(viewModel, Modifier.align(Alignment.BottomEnd))
-        AddTasksDialog(
-            showDialog,
-            onDismiss = { viewModel.onShowDialogClose() }
-        ) { viewModel.onTaskCreated(it) }
+    val uiState by produceState<TaskUiState>(
+        TaskUiState.Loading,
+        key1 = lifecycle,
+        key2 = viewModel
+    ) {
+        lifecycle.repeatOnLifecycle(state = Lifecycle.State.STARTED) {
+            viewModel.uiState.collect {
+                value = it
+            }
+        }
+    }
 
-        TasksList(viewModel)
+    when (uiState) {
+        is TaskUiState.Error -> {}
+        TaskUiState.Loading -> {
+            CircularProgressIndicator()
+        }
+        is TaskUiState.Success -> {
+            Box(modifier = modifier.fillMaxSize()) {
+                FabDialog(viewModel, Modifier.align(Alignment.BottomEnd))
+                AddTasksDialog(
+                    showDialog,
+                    onDismiss = { viewModel.onShowDialogClose() }
+                ) { viewModel.onTaskCreated(it) }
+
+                TasksList((uiState as TaskUiState.Success).tasks, viewModel)
+            }
+        }
     }
 }
 
 @Composable
-fun TasksList(viewModel: TasksViewModel) {
-    val myTasks: List<TaskModel> = viewModel.tasks
-
+fun TasksList(tasks: List<TaskModel>, viewModel: TasksViewModel) {
     LazyColumn {
-        items(myTasks, key = { it.id }) {
+        items(tasks, key = { it.id }) {
             ItemTask(it, viewModel)
         }
     }
@@ -146,10 +166,4 @@ fun AddTasksDialog(show: Boolean, onDismiss: () -> Unit, onTaskAdded: (String) -
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun TestTaskScreen() {
-    TasksScreen(TasksViewModel(), Modifier)
 }

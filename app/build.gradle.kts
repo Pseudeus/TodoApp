@@ -57,7 +57,6 @@ dependencies {
     ksp(libs.hilt.android.compiler)
 
     //LiveData
-    implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.runtime.livedata)
 
     //Room
